@@ -1,7 +1,7 @@
 import numpy as np
 import open3d as o3d
 import sys
-sys.addpath('../')
+sys.path.append('../')
 from sklearn.neighbors import NearestNeighbors as NN
 import geometry.util as gutil
 
@@ -54,36 +54,34 @@ def main():
                         help='source point cloud or mesh in .ply format')
     parser.add_argument('--target', type=str,
                         help='target point cloud or mesh in .ply format')
-    args = parser.parse()
+    args = parser.parse_args()
 
     source = o3d.read_point_cloud(args.source)
-    mesh = o3d.read_triangle_mesh(args.target)
+    try:
+        mesh = o3d.read_triangle_mesh(args.target)
+        if np.array(mesh.triangles).shape[0] == 0:
+            assert False
+        v = np.array(mesh.vertices)
+        tri = np.array(mesh.triangles)
+        v1 = v[tri[:, 0], :]
+        v2 = v[tri[:, 1], :]
+        v3 = v[tri[:, 2], :]
+        normals = np.cross(v1-v3, v2-v3)
+        normals = (normals.T / np.linalg.norm(normals, 2, axis=1)).T
+        centers = (v1+v2+v3)/3.0
 
-    v = np.array(mesh.vertices)
-    tri = np.array(mesh.triangles)
-    v1 = v[tri[:, 0], :]
-    v2 = v[tri[:, 1], :]
-    v3 = v[tri[:, 2], :]
-    normals = np.cross(v1-v3, v2-v3)
-    normals = (normals.T / np.linalg.norm(normals, 2, axis=1)).T
-    centers = (v1+v2+v3)/3.0
+        target = o3d.PointCloud()
+        target.points = o3d.Vector3dVector(centers)
+        target.normals = o3d.Vector3dVector(normals)
+    except:
+        target = o3d.read_point_cloud(args.target)
+        search_param = o3d.geometry.KDTreeSearchParamHybrid(
+                                        radius=0.2, max_nn=30)
+        o3d.estimate_normals(target, search_param=search_param)
 
-    target = o3d.PointCloud()
-    target.points = o3d.Vector3dVector(centers)
-    target.normals = o3d.Vector3dVector(normals)
-    #o3d.draw_geometries([target, source])
-
-    errors = icp_reweighted(source, target)
-    threshold = 10.0
-    indices = np.where(errors < threshold)[0]
-    while indices.shape[0] < min(8000, errors.shape[0]):
-        threshold += 0.001
-        indices = np.where(errors < threshold)[0]
-    print('threshold=%f' % threshold)
-    p = np.array(source.points)[indices, :]
-    source.points = o3d.Vector3dVector(p)
-
-    o3d.write_point_cloud(sys.argv[3], source)
+    transformation = icp_reweighted(source, target)
+    source.transform(transformation)
+    o3d.draw_geometries([source, target])
 
 if __name__ == '__main__':
     main()

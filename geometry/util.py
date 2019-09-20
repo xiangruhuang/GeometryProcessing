@@ -12,7 +12,7 @@ def cross_op(r):
     rX[0, 2] = r[1]
     rX[1, 2] = -r[0]
     rX = rX - rX.T
-    return R
+    return rX
 
 """
     Return the rotation matrix R as a function of (axis, angle)
@@ -25,7 +25,7 @@ def rodrigues(r):
     if theta < 1e-12:
         return np.eye(3)
     k = r / theta
-    """ Roduiguez"""
+    """ Rodrigues """
     R = np.cos(theta)*np.eye(3)+np.sin(theta)*cross_op(k)+(1-np.cos(theta))*np.outer(k, k)
     return R
 
