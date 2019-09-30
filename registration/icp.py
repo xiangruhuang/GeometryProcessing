@@ -5,11 +5,25 @@ sys.path.append('../')
 from sklearn.neighbors import NearestNeighbors as NN
 import geometry.util as gutil
 
-def icp_reweighted(source, target, sigma=0.01, stopping_threshold=1e-4):
+""" Iterative Closest Points (ICP) Method according to point-to-plane metric.
+    Inputs:
+        source: o3d.geometry.PointCloud
+        target: o3d.geometry.PointCloud
+        sigma: soft-thresholding [default 0.01]
+        max_iter: maximum number of iterations [default 100]
+        stopping_threshold: stopping threshold for ICP algorithm [default 1e-4]
+    Outputs:
+        transform: np.ndarray of shape [4, 4].
+                   Transformation from source to target.
+"""
+def icp_reweighted(source, target, sigma=0.01, max_iter = 100,
+                   stopping_threshold=1e-4):
+    """ If target has no normals, estimate """
     if np.array(target.normals).shape[0] == 0:
         search_param = o3d.geometry.KDTreeSearchParamHybrid(
                                         radius=0.2, max_nn=30)
         o3d.estimate_normals(target, search_param=search_param)
+
     tree = NN(n_neighbors=1, algorithm='kd_tree', n_jobs=10)
     tree = tree.fit(np.array(target.points))
     n = np.array(source.points).shape[0]
@@ -19,7 +33,7 @@ def icp_reweighted(source, target, sigma=0.01, stopping_threshold=1e-4):
     errors = []
     transform = np.eye(4)
 
-    for itr in range(100):
+    for itr in range(max_iter):
         p = np.array(source.points)
         R, trans = gutil.unpack(transform)
         p = (R.dot(p.T) + trans.reshape((3, 1))).T
@@ -51,7 +65,7 @@ def icp_reweighted(source, target, sigma=0.01, stopping_threshold=1e-4):
 
     return transform
 
-def main():
+if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='reweighted ICP algorithm')
     parser.add_argument('--source', type=str,
@@ -86,6 +100,3 @@ def main():
     transformation = icp_reweighted(source, target)
     source.transform(transformation)
     o3d.draw_geometries([source, target])
-
-if __name__ == '__main__':
-    main()

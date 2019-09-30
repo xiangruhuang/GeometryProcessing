@@ -29,39 +29,18 @@ class PinholeCamera:
         points = R.T.dot(np.linalg.pinv(intrinsic).dot(points.T)-trans[:, np.newaxis]).T
         return points
 
-    #def track_view(self, vis, save_depth):
-    #    ctr = vis.get_view_control()
-    #    """ change pinhole camera intrinsic and extrinsic """
-    #    #import ipdb; ipdb.set_trace()
-    #    #pinhole_params = ctr.convert_to_pinhole_camera_parameters()
-    #    #width = 640
-    #    #height = 480
-    #    #fx, fy = pinhole_params.intrinsic.get_focal_length()
-    #    #cx = width/2 - 0.5
-    #    #cy = height/2 - 0.5
-    #    #pinhole_params.intrinsic.set_intrinsics(width, height, fx, fy, cx, cy)
-    #    ##pinhole_params.extrinsic = self.extrinsic
-    #    #ctr.convert_from_pinhole_camera_parameters(pinhole_params)
-
-    #    """ Retrieve Depth Data """
-    #    if save_depth:
-    #        depth = vis.capture_depth_float_buffer(False)
-    #        depth = np.array(depth)
-    #        depth = depth[::2, ::3]
-    #        #valid_idx = np.where(depth > 1e-7)
-    #        #import ipdb; ipdb.set_trace()
-    #        #mask = np.stack([valid_idx[0], valid_idx[1]], axis=1)
-
     """ Project Triangle Mesh to depth image.
     Input:
         mesh: o3d.geometry.TriangleMesh object
-        intersecting_triangles: if True, we are collecting correspondences.
+        intersecting_triangles: if True, we are also collecting correspondences.
     Output:
-        depth: np.ndarray of shape [W, H]
+        depth: np.ndarray of shape [W, H].
+    Additional Output (if intersecting_triangles=True):
         points3d: np.ndarray of shape [M, 3].
                   point cloud in 3D, M is number of valid pixels/points.
-        correspondence: np.ndarray of shape [M] and dtype np.int32
-                        each entry lies in range [-1, N], -1 indicates invalid.
+        correspondences: np.ndarray of shape [M] and dtype np.int32
+                         each entry lies in range [-1, N],
+                         -1 indicates invalid.
         valid_pixel_indices: np.ndarray of shape [M, 2],
                              each row contains a valid pixel coordinates.
     """
@@ -80,12 +59,14 @@ class PinholeCamera:
 
             """ Hash depth pixels """
             valid_idx = np.where(depth > 1e-7)
-            x, y = np.meshgrid(np.arange(depth.shape[0]), np.arange(depth.shape[1]), indexing='ij')
+            x, y = np.meshgrid(np.arange(depth.shape[0]),
+                               np.arange(depth.shape[1]), indexing='ij')
             z = depth[valid_idx]
             x = x[valid_idx]
             y = y[valid_idx]
-            points = np.stack([y*z, x*z, z], axis=1)
-            points = R.T.dot(np.linalg.pinv(intrinsic).dot(points.T)-trans[:, np.newaxis]).T
+            points3d = np.stack([y*z, x*z, z], axis=1)
+            points3d = R.T.dot(np.linalg.pinv(intrinsic).dot(points.T)-
+                               trans[:, np.newaxis]).T
             #hash_table = {}
             #for i in range(x.shape[0]):
             #    xi = x[i]
@@ -148,13 +129,12 @@ class PinholeCamera:
             #plt.show()
             self.vis.remove_geometry(mesh)
             valid_pixel_indices = np.stack([valid_idx[0], valid_idx[1]], axis=1)
-            return depth, points, correspondences, valid_pixel_indices
-
+            return depth, points3d, correspondences, valid_pixel_indices
         else:
             self.vis.remove_geometry(mesh)
             return depth
 
-def main():
+if __name__ == '__main__':
     camera = PinholeCamera()
     mesh_male = o3d.io.read_triangle_mesh('example_data/mesh_male.ply')
     camera.set_extrinsic(np.diag([1,-1,1]), np.zeros(3))
@@ -171,6 +151,3 @@ def main():
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(np.array(points))
     o3d.draw_geometries([pcd])
-
-if __name__ == '__main__':
-    main()
