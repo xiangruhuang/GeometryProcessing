@@ -6,6 +6,10 @@ from sklearn.neighbors import NearestNeighbors as NN
 import geometry.util as gutil
 
 def icp_reweighted(source, target, sigma=0.01, stopping_threshold=1e-4):
+    if np.array(target.normals).shape[0] == 0:
+        search_param = o3d.geometry.KDTreeSearchParamHybrid(
+                                        radius=0.2, max_nn=30)
+        o3d.estimate_normals(target, search_param=search_param)
     tree = NN(n_neighbors=1, algorithm='kd_tree', n_jobs=10)
     tree = tree.fit(np.array(target.points))
     n = np.array(source.points).shape[0]
