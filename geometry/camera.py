@@ -65,7 +65,7 @@ class PinholeCamera:
             x = x[valid_idx]
             y = y[valid_idx]
             points3d = np.stack([y*z, x*z, z], axis=1)
-            points3d = R.T.dot(np.linalg.pinv(intrinsic).dot(points.T)-
+            points3d = R.T.dot(np.linalg.pinv(intrinsic).dot(points3d.T)-
                                trans[:, np.newaxis]).T
             #hash_table = {}
             #for i in range(x.shape[0]):
@@ -81,7 +81,7 @@ class PinholeCamera:
             vertices = np.array(mesh.vertices)
             from sklearn.neighbors import NearestNeighbors as NN
             tree = NN(n_neighbors=1, algorithm='kd_tree', n_jobs=10).fit(vertices)
-            _, indices = tree.kneighbors(points)
+            _, indices = tree.kneighbors(points3d)
             ############################## DEBUG ############################
             #p1 = o3d.geometry.PointCloud()
             #p1.points = o3d.utility.Vector3dVector(vertices)
