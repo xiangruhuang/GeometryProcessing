@@ -99,7 +99,7 @@ def drodriguez(r):
 
   theta = np.linalg.norm(r, 2)
   if theta < 1e-15:
-    return np.zeros((3, 3, 3))
+    return np.random.randn(3, 3, 3)*1e-1
   else:
     k = r / theta
   sint = np.sin(theta)
