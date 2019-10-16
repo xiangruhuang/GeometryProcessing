@@ -5,6 +5,7 @@ class PinholeCamera:
     def __init__(self, extrinsic=None):
         self.vis = o3d.visualization.Visualizer()
         self.vis.create_window('ply', 320, 240, 50, 50, False)
+        
 
     """ Inverse projection, from depth image to 3D point cloud
     Input:
@@ -12,11 +13,17 @@ class PinholeCamera:
     Output:
         points: np.ndarray of shape [N, 3].
     """
-    def depth2pointcloud(self, depth):
+    def depth2pointcloud(self, depth, ext=None, intc=None):
         ctr = self.vis.get_view_control()
         pinhole_params = ctr.convert_to_pinhole_camera_parameters()
-        intrinsic = pinhole_params.intrinsic.intrinsic_matrix
-        extrinsic = pinhole_params.extrinsic
+        if intc is not None:
+          intrinsic = intc
+        else:
+          intrinsic = pinhole_params.intrinsic.intrinsic_matrix
+        if ext is not None:
+          extrinsic = ext
+        else:
+          extrinsic = pinhole_params.extrinsic
         R = extrinsic[:3, :3]
         trans = extrinsic[:3, 3]
         x, y = np.meshgrid(np.arange(depth.shape[0]), np.arange(depth.shape[1]), indexing='ij')
@@ -24,7 +31,10 @@ class PinholeCamera:
         z = depth[valid_idx]
         x = x[valid_idx]*z
         y = y[valid_idx]*z
-        points = np.stack([x,y,z], axis=1)
+        flip = np.array([[0,1,0],
+                         [1,0,0],
+                         [0,0,1]])
+        points = flip.dot(np.stack([x, y, z], axis=1).T).T
 
         points = R.T.dot(np.linalg.pinv(intrinsic).dot(points.T)-trans[:, np.newaxis]).T
         return points
@@ -48,15 +58,14 @@ class PinholeCamera:
         self.vis.add_geometry(mesh)
         depth = self.vis.capture_depth_float_buffer(True)
         depth = np.array(depth)
+        ctr = self.vis.get_view_control()
+        pinhole_params = ctr.convert_to_pinhole_camera_parameters()
+        intrinsic = pinhole_params.intrinsic.intrinsic_matrix
+        extrinsic = pinhole_params.extrinsic
         if intersecting_triangles:
             """ retrieve camera extrinsic """
-            ctr = self.vis.get_view_control()
-            pinhole_params = ctr.convert_to_pinhole_camera_parameters()
-            intrinsic = pinhole_params.intrinsic.intrinsic_matrix
-            extrinsic = pinhole_params.extrinsic
             R = extrinsic[:3, :3]
             trans = extrinsic[:3, 3]
-
             """ Hash depth pixels """
             valid_idx = np.where(depth > 1e-7)
             x, y = np.meshgrid(np.arange(depth.shape[0]),
@@ -81,7 +90,8 @@ class PinholeCamera:
             vertices = np.array(mesh.vertices)
             from sklearn.neighbors import NearestNeighbors as NN
             tree = NN(n_neighbors=1, algorithm='kd_tree', n_jobs=10).fit(vertices)
-            _, indices = tree.kneighbors(points3d)
+            dists, indices = tree.kneighbors(points3d)
+            print(dists.mean())
             ############################## DEBUG ############################
             #p1 = o3d.geometry.PointCloud()
             #p1.points = o3d.utility.Vector3dVector(vertices)
@@ -129,10 +139,10 @@ class PinholeCamera:
             #plt.show()
             self.vis.remove_geometry(mesh)
             valid_pixel_indices = np.stack([valid_idx[0], valid_idx[1]], axis=1)
-            return depth, points3d, correspondences, valid_pixel_indices
+            return depth, extrinsic, intrinsic, points3d, correspondences, valid_pixel_indices
         else:
             self.vis.remove_geometry(mesh)
-            return depth
+            return depth, extrinsic, intrinsic
 
 if __name__ == '__main__':
     camera = PinholeCamera()

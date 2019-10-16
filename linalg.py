@@ -1,5 +1,22 @@
 import numpy as np
 
+
+""" Projection, from depth image to 2D pixels
+Input:
+    pointcloud: np.ndarray of shape [N, 3].
+    intrinsic: camera intrinsic
+    extrinsic: extrinsic parameters
+Output:
+    pixels: np.ndarray of shape [N, 2].
+"""
+def pointcloud2pixel(pointcloud, extrinsic, intrinsic):
+  R = extrinsic[:3, :3]
+  trans = extrinsic[:3, 3]
+  pixels = intrinsic.dot(R.dot(pointcloud.T)+trans[:, np.newaxis]).T
+  pixels[:, 0] /= pixels[:, 2]
+  pixels[:, 1] /= pixels[:, 2]
+  return pixels[:, :2]
+
 def cross_op(r):
   """
   matrix operator of cross product
