@@ -1,7 +1,7 @@
 import open3d as o3d
 import numpy as np
 import sys
-sys.path.append('../')
+sys.path.append('/home/xrhuang/Projects/Learn2Opt/')
 from GeometryProcessing import linalg
 import util as geo_util
 
