@@ -1,6 +1,5 @@
 import numpy as np
 
-
 """ Projection, from depth image to 2D pixels
 Input:
     pointcloud: np.ndarray of shape [N, 3].
@@ -13,9 +12,44 @@ def pointcloud2pixel(pointcloud, extrinsic, intrinsic):
   R = extrinsic[:3, :3]
   trans = extrinsic[:3, 3]
   pixels = intrinsic.dot(R.dot(pointcloud.T)+trans[:, np.newaxis]).T
+  flip = np.array([[0,1,0],
+                   [1,0,0],
+                   [0,0,1]])
+  pixels = np.linalg.inv(flip).dot(pixels.T).T
   pixels[:, 0] /= pixels[:, 2]
   pixels[:, 1] /= pixels[:, 2]
   return pixels[:, :2]
+
+def depth2pointcloud(depth, ext, intc):
+  """Inverse projection, from depth image to 3D point cloud.
+
+  Args:
+    depth: np.ndarray of shape [W, H] (0 indicates invalid depth).
+    ext: extrinsic matrix in [4, 4]
+    intc: intrinsic matrix in [3, 3]
+
+  Returns:
+    points: np.ndarray of shape [N, 3].
+  """
+  intrinsic = intc
+  extrinsic = ext
+  R = extrinsic[:3, :3]
+  trans = extrinsic[:3, 3]
+  x, y = np.meshgrid(np.arange(depth.shape[0]), np.arange(depth.shape[1]), indexing='ij')
+  valid_idx = np.where(depth > 1e-7)
+  z = depth[valid_idx]
+  x = x[valid_idx]*z
+  y = y[valid_idx]*z
+  flip = np.array([[0,1,0],
+                   [1,0,0],
+                   [0,0,1]])
+  points = flip.dot(np.stack([x, y, z], axis=1).T).T
+
+  points = np.linalg.pinv(intrinsic).dot(points.T).T
+
+  points = R.T.dot(points.T-trans[:, np.newaxis]).T
+
+  return points
 
 def cross_op(r):
   """
