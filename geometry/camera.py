@@ -3,7 +3,7 @@ import numpy as np
 import sys
 sys.path.append('/home/xrhuang/Projects/Learn2Opt/')
 from GeometryProcessing import linalg
-import util as geo_util
+import GeometryProcessing.linalg as geo_util
 
 class PinholeCamera:
   def __init__(self, extrinsic=None):
