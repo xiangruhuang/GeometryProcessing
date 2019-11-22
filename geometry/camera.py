@@ -37,6 +37,8 @@ class PinholeCamera:
   """
   def project(self, mesh, intersecting_triangles=False):
     mesh.transform(self.T)
+    import time
+    t1 = time.time()
     self.vis.add_geometry(mesh)
     depth = self.vis.capture_depth_float_buffer(True)
     depth = np.array(depth)
