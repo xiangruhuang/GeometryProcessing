@@ -1,9 +1,11 @@
 import open3d as o3d
 import numpy as np
-import sys
-sys.path.append('/home/xrhuang/Projects/Learn2Opt/')
-from GeometryProcessing import linalg
-import GeometryProcessing.linalg as geo_util
+import sys, os
+project_path=os.path.abspath(__file__)
+project_path=os.path.dirname(project_path)
+sys.path.append(project_path)
+import linalg
+import geometry.util as geo_util
 
 class PinholeCamera:
   def __init__(self, extrinsic=None):
