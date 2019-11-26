@@ -3,6 +3,7 @@ import numpy as np
 import sys, os
 project_path=os.path.abspath(__file__)
 project_path=os.path.dirname(project_path)
+project_path=os.path.dirname(project_path)
 sys.path.append(project_path)
 import linalg
 import geometry.util as geo_util
